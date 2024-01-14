@@ -36,6 +36,15 @@ class Bot
         $chat_id = $arrData['message']['from']['id'];
         // проверяем кто написал: пользователь или админ
         $is_admin = $this->isAdmin($chat_id);
+        // обработка нажатий inline кнопок
+        if (isset($arrData['callback_query'])) {
+            if($arrData['callback_query']['data'] == "showSupport"){
+                $this->displaySupport($arrData);
+            }
+            if($arrData['callback_query']['data'] == "showCat"){
+                $this->displayCat($arrData);
+            }
+        }
         // если это Старт
         if($this->isStartBot($arrData)) {
             // Определяем кто написал
@@ -43,15 +52,30 @@ class Bot
             // Выводим приветственное слово
             $hello = $is_admin ? $this->helloAdmin : $this->setTextHello($this->helloUser, $arrData);
             // Отправляем сообщение
+            // формируем json для inline кнопок под сообщением
+            $keyboard = [ "inline_keyboard" =>
+                [ /* ряд кнопок */
+                    [
+                        [
+                            "text" => "Поддержать",
+                            "callback_data" => "showSupport"
+                        ],
+                        [
+                            "text" => "Рандомный котик",
+                            "callback_data" => "showCat"
+                        ]
+                    ]
+                ]
+            ];
+            $keyboard_json = json_encode($keyboard);
+
             $this->requestToTelegram(array("text" => $hello), $chat_id, "sendMessage");
             $this->requestToTelegram(array("sticker" => "CAACAgIAAxkBAAIB5WWj6MjPeqIZuH8CaALxD8G9KgRgAAKWOwACo33oSNC_B-9StuiSNAQ"), $chat_id, "sendSticker");
+            $this->requestToTelegram(array("text" => "Вы можете воспользоваться кнопками ниже или написать сообщение которое я обязательно прочитаю 👽", "reply_markup" => $keyboard_json), $chat_id, "sendMessage");
         } elseif($this->isSupportBot($arrData)){
-            $this->requestToTelegram(array("text" => "Лучшая поддержка это распространение стикеров повсюду ✨\nОднако, если Вы всё таки хотите поддержать меня материально, то тогда что-нибудь придумаю потом)"), $chat_id, "sendMessage");
+            $this->displaySupport($arrData, $chat_id);
         } elseif($this->isCatBot($arrData)){
-            $url = $this->randomCatURL;
-            $json = file_get_contents($url);
-            $json_data = json_decode($json, true);
-            $this->requestToTelegram(array("text" => $json_data[0]["url"]), $chat_id, "sendMessage");
+            $this->displayCat($arrData, $chat_id);
         } else {
             // Если это не старт не кот и не саппорт
             if($is_admin)  {
@@ -87,9 +111,33 @@ class Bot
                     'message_id' => $arrData['message']['message_id'],
                 );
                 $this->requestToTelegram($dataSend, $this->adminId, "forwardMessage");
-                $this->requestToTelegram(array("text" => "ID:".$arrData['message']['from']['id']), $this->adminId, "sendMessage");
+                if (!isset($arrData['callback_query'])){
+                    $this->requestToTelegram(array("text" => "ID:".$arrData['message']['from']['id']), $this->adminId, "sendMessage");
+                }
             }
         }
+    }
+
+    /** Отображаем инфу по поддержке
+     * @param $data
+     * @return bool
+     */
+    private function displaySupport($arrData, $chat_id = NULL) {
+        $chat_id = $chat_id != NULL ? $chat_id : $arrData['callback_query']['from']['id'];
+        $this->requestToTelegram(array("text" => "Лучшая поддержка это распространение стикеров повсюду ✨\nОднако, если Вы всё таки хотите поддержать меня материально, то тогда что-нибудь придумаю потом)"), $chat_id, "sendMessage");
+        $this->requestToTelegram(array("sticker" => "CAACAgIAAxkBAAIDemWkRIcsYuRYj_G6VAWU1WUP3bBgAAKNOQACyJupSA8_Z3cM36LFNAQ"), $chat_id, "sendSticker");
+    }
+
+    /** Отображаем рандомного кота
+     * @param $data
+     * @return bool
+     */
+    private function displayCat($arrData, $chat_id = NULL) {
+        $chat_id = $chat_id != NULL ? $chat_id : $arrData['callback_query']['from']['id'];
+        $url = $this->randomCatURL;
+        $json = file_get_contents($url);
+        $json_data = json_decode($json, true);
+        $this->requestToTelegram(array("text" => $json_data[0]["url"]), $chat_id, "sendMessage");
     }
 
     /** Проверяем не отвечаем ли мы боту

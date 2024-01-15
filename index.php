@@ -25,6 +25,26 @@ class Bot
     private $answerAdmin = "Выберите в контекстном меню функцию Ответить/Reply в сообщении, на которое хотите ответить\n ";
 
     private $randomCatURL = "https://api.thecatapi.com/v1/images/search";
+
+    private $stickerPacks = [
+                [
+                    "text" => "AI Stickers - Part 1",
+                    "link" => "https://t.me/addstickers/AiStickersPack",
+                    "sticker" => "CAACAgIAAxkBAAJuTmWljUpkX2mzAmYWRIFwfEYwll92AAL6PAACJXDQSCX0QUQnZkltNAQ"
+                ],
+                [
+                    "text" => "AI Stickers - Part 2",
+                    "link" => "https://t.me/addstickers/AiStickersPack2",
+                    "sticker" => "CAACAgIAAxkBAAJuTGWljP8EtmeFFCJKR9pMBHRSLlH5AAKhPQACleYJSfdQl8v0C7e5NAQ"
+                ],
+                [
+                    "text" => "Арты Пепачки",
+                    "link" => "https://t.me/addstickers/PepachkaArts",
+                    "sticker" => "CAACAgIAAxkBAAJuUGWljVWQl6iGR-wbmxYgJP5iThPoAAIKPAAChqvwSP6jd3zQEUVNNAQ"
+                ]
+            ];
+
+
     /** Обрабатываем сообщение
      * @param $data
      */
@@ -44,6 +64,9 @@ class Bot
             if($arrData['callback_query']['data'] == "showCat"){
                 $this->displayCat($arrData);
             }
+            if($arrData['callback_query']['data'] == "showStickers"){
+            	$this->displayStickers($arrData);
+            }
         }
         // если это Старт
         if($this->isStartBot($arrData)) {
@@ -57,12 +80,18 @@ class Bot
                 [ /* ряд кнопок */
                     [
                         [
-                            "text" => "Поддержать",
-                            "callback_data" => "showSupport"
+                            "text" => "Стикерпаки",
+                            "callback_data" => "showStickers"
                         ],
                         [
                             "text" => "Рандомный котик",
                             "callback_data" => "showCat"
+                        ]
+                    ],
+                    [
+                        [
+                            "text" => "Поддержать",
+                            "callback_data" => "showSupport"
                         ]
                     ]
                 ]
@@ -74,6 +103,8 @@ class Bot
             $this->requestToTelegram(array("text" => "Вы можете воспользоваться кнопками ниже или написать сообщение которое я обязательно прочитаю 👽", "reply_markup" => $keyboard_json), $chat_id, "sendMessage");
         } elseif($this->isSupportBot($arrData)){
             $this->displaySupport($arrData, $chat_id);
+        } elseif($this->isStickersBot($arrData)){
+            $this->displayStickers($arrData, $chat_id);
         } elseif($this->isCatBot($arrData)){
             $this->displayCat($arrData, $chat_id);
         } else {
@@ -120,7 +151,7 @@ class Bot
 
     /** Отображаем инфу по поддержке
      * @param $data
-     * @return bool
+     * @param $chat_id is empty if called in callback_query
      */
     private function displaySupport($arrData, $chat_id = NULL) {
         $chat_id = $chat_id != NULL ? $chat_id : $arrData['callback_query']['from']['id'];
@@ -128,9 +159,34 @@ class Bot
         $this->requestToTelegram(array("sticker" => "CAACAgIAAxkBAAIDemWkRIcsYuRYj_G6VAWU1WUP3bBgAAKNOQACyJupSA8_Z3cM36LFNAQ"), $chat_id, "sendSticker");
     }
 
+    /** Отображаем стикерпаки
+     * @param $data
+     * @param $chat_id is empty if called in callback_query
+     */
+    private function displayStickers($arrData, $chat_id = NULL) {
+        $chat_id = $chat_id != NULL ? $chat_id : $arrData['callback_query']['from']['id'];
+
+		$list = array();
+
+        foreach($this->stickerPacks as $pack) {
+        	array_push($list, array(["text"=>$pack['text'],'url' => $pack['link']]));
+        }
+
+        $replyMarkup = array("inline_keyboard" => $list);
+
+        $encodedKeyboard = json_encode($replyMarkup);
+
+        $this->requestToTelegram(array("text" => "Вот все стикерпаки которые доступны на данный момент. 😸\nВсегда открыт к предложениям и идеям, не стесняйтесь писать :3", "reply_markup" => $encodedKeyboard), $chat_id, "sendMessage");
+
+        // $this->stickerPacks
+        foreach($this->stickerPacks as $pack) {
+        	$this->requestToTelegram(array("sticker" => $pack['sticker']), $chat_id, "sendSticker");
+        }
+    }
+
     /** Отображаем рандомного кота
      * @param $data
-     * @return bool
+     * @param $chat_id is empty if called in callback_query
      */
     private function displayCat($arrData, $chat_id = NULL) {
         $chat_id = $chat_id != NULL ? $chat_id : $arrData['callback_query']['from']['id'];
@@ -208,6 +264,9 @@ class Bot
      */
     private function isCatBot($data) {
         return ($data['message']['text'] == "/cat") ? true : false;
+    }
+    private function isStickersBot($data) {
+        return ($data['message']['text'] == "/stickers") ? true : false;
     }
 
     /** Определяем тип сообщения и передаем для отправки

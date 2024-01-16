@@ -193,7 +193,7 @@ class Bot
         $url = $this->randomCatURL;
         $json = file_get_contents($url);
         $json_data = json_decode($json, true);
-        $this->requestToTelegram(array("text" => $json_data[0]["url"]), $chat_id, "sendMessage");
+        $this->requestToTelegram(array("text" => '<a href="'.$json_data[0]["url"].'">🐈</a>', "parse_mode" => "HTML"), $chat_id, "sendMessage");
     }
 
     /** Проверяем не отвечаем ли мы боту

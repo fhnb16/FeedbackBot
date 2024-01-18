@@ -121,7 +121,7 @@ class Bot
                     $this->requestToTelegram(array("text" => $this->answerAdmin), $this->adminId, "sendMessage");
                 }
             } else {
-                // Если этонаписал пользователь то перенаправляем админу
+                // Если это написал пользователь то перенаправляем админу
                 $dataSend = array(
                     'from_chat_id' => $arrData['message']['from']['id'],
                     'message_id' => $arrData['message']['message_id'],

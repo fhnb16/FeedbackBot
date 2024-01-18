@@ -1,4 +1,5 @@
 <?php
+include_once 'config.php';
 // определяем кодировку
 header('Content-type: text/html; charset=utf-8');
 // Создаем объект бота
@@ -12,11 +13,11 @@ $bot->init('php://input');
 class Bot
 {
     // <bot_token> - созданный токен для нашего бота от @BotFather
-    private $botToken = ""; // 123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11
+    private $botToken = CFG_TOKEN; // 123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11
     // наш уникальный id в Telegramm - можно воспользоваться @userinfobot при старте он вам его покажет
-    private $adminId = 0000000;
+    private $adminId = CFG_ADMIN;
     // адрес для запросов к API Telegram
-    private $apiUrl = "https://api.telegram.org/bot";
+    private $apiUrl = CFG_API;
     // Приветствие для админа при старте
     private $helloAdmin = "Приветствую тебя Создатель. 🙏\nНачинаем ждать сообщений от пользователей.";
     // Приветствие для пользователя при старте
@@ -24,25 +25,9 @@ class Bot
     // Сообщение в случае если админ напишет боту
     private $answerAdmin = "Выберите в контекстном меню функцию Ответить/Reply в сообщении, на которое хотите ответить\n ";
 
-    private $randomCatURL = "https://api.thecatapi.com/v1/images/search";
+    private $randomCatURL = CFG_CAT;
 
-    private $stickerPacks = [
-                [
-                    "text" => "AI Stickers - Part 1",
-                    "link" => "https://t.me/addstickers/AiStickersPack",
-                    "sticker" => "CAACAgIAAxkBAAJuTmWljUpkX2mzAmYWRIFwfEYwll92AAL6PAACJXDQSCX0QUQnZkltNAQ"
-                ],
-                [
-                    "text" => "AI Stickers - Part 2",
-                    "link" => "https://t.me/addstickers/AiStickersPack2",
-                    "sticker" => "CAACAgIAAxkBAAJuTGWljP8EtmeFFCJKR9pMBHRSLlH5AAKhPQACleYJSfdQl8v0C7e5NAQ"
-                ],
-                [
-                    "text" => "Арты Пепачки",
-                    "link" => "https://t.me/addstickers/PepachkaArts",
-                    "sticker" => "CAACAgIAAxkBAAJuUGWljVWQl6iGR-wbmxYgJP5iThPoAAIKPAAChqvwSP6jd3zQEUVNNAQ"
-                ]
-            ];
+    private $stickerPacks = CFG_STICKERS;
 
 
     /** Обрабатываем сообщение
@@ -327,13 +312,15 @@ class Bot
     */
     private function getData($data)
     {
-        //$this->setFileLog($data);
+        if(CFG_LOGGING){
+            $this->setFileLog($data);
+        }
         return json_decode(file_get_contents($data), TRUE);
     }
 
     private function setFileLog($data) {
         $data = json_decode(file_get_contents($data), TRUE);
-        $fh = fopen('log.txt', 'a') or die('can\'t open file');
+        $fh = fopen(CFG_LOGS, 'a') or die('can\'t open file');
         ((is_array($data)) || (is_object($data))) ? fwrite($fh, print_r($data, TRUE)."\n") : fwrite($fh, $data . "\n");
         fclose($fh);
     }

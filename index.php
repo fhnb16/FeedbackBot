@@ -43,14 +43,15 @@ class Bot
         $is_admin = $this->isAdmin($chat_id);
         // обработка нажатий inline кнопок
         if (isset($arrData['callback_query'])) {
-            if($arrData['callback_query']['data'] == "showSupport"){
-                $this->displaySupport($arrData);
-            }
-            if($arrData['callback_query']['data'] == "showCat"){
-                $this->displayCat($arrData);
-            }
-            if($arrData['callback_query']['data'] == "showStickers"){
-            	$this->displayStickers($arrData);
+            switch($arrData['callback_query']['data']){
+                case "showSupport": $this->displaySupport($arrData);
+                break;
+                case "showCat": $this->displayCat($arrData);
+                break;
+                case "showStickers": $this->displayStickers($arrData);
+                break;
+                case "showPaymentMethods": $this->editDonateMessage($arrData);
+                break;
             }
         }
         // если это Старт
@@ -140,8 +141,43 @@ class Bot
      */
     private function displaySupport($arrData, $chat_id = NULL) {
         $chat_id = $chat_id != NULL ? $chat_id : $arrData['callback_query']['from']['id'];
-        $this->requestToTelegram(array("text" => "Лучшая поддержка это распространение стикеров повсюду ✨\nОднако, если Вы всё таки хотите поддержать меня материально, то тогда что-нибудь придумаю потом)"), $chat_id, "sendMessage");
         $this->requestToTelegram(array("sticker" => "CAACAgIAAxkBAAIDemWkRIcsYuRYj_G6VAWU1WUP3bBgAAKNOQACyJupSA8_Z3cM36LFNAQ"), $chat_id, "sendSticker");
+        $this->requestToTelegram(array("text" => "Лучшая поддержка это распространение стикеров повсюду ✨\n\nОднако, если Вы всё-таки хотите поддержать меня материально, то нажмите кнопку ниже, чтобы увидеть реквизиты <3", "reply_markup" => json_encode([ "inline_keyboard" =>
+                [ /* ряд кнопок */
+                    [
+                        [
+                            "text" => "МИР / TON Coin / Bitcoin",
+                            "callback_data" => "showPaymentMethods"
+                        ]
+                    ]
+                ]
+            ])), $chat_id, "sendMessage");
+    }
+
+    private function editDonateMessage($arrData, $chat_id = NULL) {
+        $chat_id = $chat_id != NULL ? $chat_id : $arrData['callback_query']['from']['id'];
+        $tempEditedMessage = "";
+        foreach(CFG_MONEY as $method=>$code) {
+            $tempMethod = "";
+            switch($method){
+                case "donationalerts": $tempMethod = "DonationAlerts";
+                break;
+                case "btc": $tempMethod = "Bitcoin";
+                break;
+                case "ton": $tempMethod = "Ton";
+                break;
+                case "usdt": $tempMethod = "USDT";
+                break;
+                case "visa": $tempMethod = "Visa";
+                break;
+                case "mastercard": $tempMethod = "MasterCard";
+                break;
+                case "mir": $tempMethod = "Мир";
+                break;
+            }
+            $tempEditedMessage .= "**" . $tempMethod . "**:\n" . "`" . $code . "`\n\n";
+        }
+        $this->requestToTelegram(array("text" => $tempEditedMessage, "message_id"=>$arrData['callback_query']['message']['message_id'], "parse_mode"=>'Markdown'), $chat_id, "editMessageText");
     }
 
     /** Отображаем стикерпаки
@@ -164,9 +200,9 @@ class Bot
         $this->requestToTelegram(array("text" => "Вот все стикерпаки которые доступны на данный момент. 😸\nВсегда открыт к предложениям и идеям, не стесняйтесь писать :3", "reply_markup" => $encodedKeyboard), $chat_id, "sendMessage");
 
         // $this->stickerPacks
-        foreach($this->stickerPacks as $pack) {
+        /*foreach($this->stickerPacks as $pack) {
         	$this->requestToTelegram(array("sticker" => $pack['sticker']), $chat_id, "sendSticker");
-        }
+        }*/
     }
 
     /** Отображаем рандомного кота

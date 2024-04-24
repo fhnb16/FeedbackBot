@@ -10,7 +10,10 @@ define('CFG_MONEY', [
                     "visa" => "",
                     "mastercard" => "",
                     "mir" => "",
-                    "donationalerts" => ""
+                    "donationalerts" => "",
+                    "ton" => "",
+                    "btc" => "",
+                    "usdt" => ""
                 ]);
 define('CFG_STICKERS', [
                 [

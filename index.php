@@ -63,7 +63,22 @@ class Bot
                 break;
                 case "hidePaymentMethods": $this->displaySupport($arrData, NULL, 2);
                 break;
+                case "addToBlacklist": $this->addToBlacklist($arrData);
+                break;
+                case "exitChat": $this->exitChat($arrData);
+                break;
+                case "sendSupportToChat": 
+                    $exploded = explode(":", $arrData['callback_query']['message']['text']);
+                    if($exploded[0] == "ID") {
+                        $this->displaySupport($arrData, $exploded[1]);
+                    }
+                    $this->requestToTelegram(array("text" => "Сообщение отправлено", "show_alert" => false, 'callback_query_id' => $arrData['callback_query']['id']), null, "answerCallbackQuery");
+                break;
             }
+        }
+        if ($this->isUserInFile(CFG_BLACKLIST, $chat_id)) {
+            $this->requestToTelegram(array("sticker" => "CAACAgIAAxkBAAKBYGb5hdBzu8f6hjBEga_RIxll0FZ3AAJpRwACIfohSbDLv4aa4M-VNgQ"), $chat_id, "sendSticker");
+            exit();
         }
         // если это Старт
         if($this->isStartBot($arrData)) {
@@ -139,9 +154,32 @@ class Bot
                     'message_id' => $arrData['message']['message_id'],
                 );
                 $this->requestToTelegram($dataSend, $this->adminId, "forwardMessage");
-                if (!isset($arrData['callback_query'])){
+                    $keyboard = [ "inline_keyboard" =>
+                        [
+                            [
+                                [
+                                    "text" => "Бан",
+                                    "callback_data" => "addToBlacklist"
+                                ],
+                                [
+                                    "text" => "Выйти",
+                                    "callback_data" => "exitChat"
+                                ],
+                                [
+                                    "text" => "Показать донат",
+                                    "callback_data" => "sendSupportToChat"
+                                ]
+                            ]
+                        ]
+                    ];
+                    $keyboard_json = json_encode($keyboard);
+
+                    if(isset($arrData['message']['from']['id'])){
+                        $this->requestToTelegram(array("text" => "ID:".$arrData['message']['from']['id'], "reply_markup" => $keyboard_json), $this->adminId, "sendMessage");
+                    }
+                /*if (!isset($arrData['callback_query'])){
                     $this->requestToTelegram(array("text" => "ID:".$arrData['message']['from']['id']), $this->adminId, "sendMessage");
-                }
+                }*/
             }
         }
     }
@@ -247,6 +285,17 @@ class Bot
         foreach($this->stickerPacks as $pack) {
         	$this->requestToTelegram(array("sticker" => $pack['sticker']), $chat_id, "sendSticker");
         }
+    }
+
+    private function addToBlacklist($data) {
+        $exploded = explode(":", $data['callback_query']['message']['text']);
+        if($exploded[0] == "ID") {
+            $this->requestToTelegram(array("text" => $this->toggleUserInFile(CFG_BLACKLIST, $exploded[1]), "show_alert" => false, 'callback_query_id' => $data['callback_query']['id']), null, "answerCallbackQuery");
+        }
+    }
+
+    private function exitChat($data) {
+        $this->requestToTelegram(array("text" => "Функция пока не реализована", "show_alert" => false, 'callback_query_id' => $data['callback_query']['id']), null, "answerCallbackQuery");
     }
 
     /** Отображаем рандомного кота
@@ -414,6 +463,7 @@ class Bot
     {
         $result = null;
         $data['chat_id'] = $chat_id;
+        
 
         if (is_array($data)) {
             $ch = curl_init();
@@ -423,6 +473,56 @@ class Bot
             $result = curl_exec($ch);
             curl_close($ch);
         }
+        return $result;
+    }
+
+    // Функция для проверки, есть ли пользователь в файле
+    function isUserInFile($filePath, $userId) {
+        if (!file_exists($filePath)) {
+            return false; // Если файла нет, пользователя точно нет
+        }
+
+        // Открываем файл для чтения
+        $file = fopen($filePath, 'r');
+        if ($file) {
+            while (($line = fgets($file)) !== false) {
+                $line = trim($line); // Убираем возможные пробелы и переносы строк
+                if ($line == $userId) {
+                    fclose($file); // Не забываем закрыть файл
+                    return true;   // Пользователь найден
+                }
+            }
+            fclose($file); // Закрываем файл после чтения
+        }
+
+        return false; // Если пользователь не найден
+    }
+
+    // Функция для добавления или удаления пользователя в/из файла
+    function toggleUserInFile($filePath, $userId) {
+        $result = "";
+        $users = [];
+
+        if (file_exists($filePath)) {
+            // Читаем файл и собираем все строки в массив
+            $users = file($filePath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        }
+
+        // Проверяем, есть ли пользователь в массиве
+        if (in_array($userId, $users)) {
+            // Если есть, удаляем
+            $users = array_filter($users, function ($line) use ($userId) {
+                return $line != $userId;
+            });
+            $result = $userId . " удален из списка";
+        } else {
+            // Если нет, добавляем
+            $users[] = $userId;
+            $result = $userId . " добавлен в список.";
+        }
+
+        // Перезаписываем файл новым содержимым
+        file_put_contents($filePath, implode(PHP_EOL, $users) . PHP_EOL);
         return $result;
     }
 }

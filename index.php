@@ -175,7 +175,7 @@ class Bot
                     $keyboard_json = json_encode($keyboard);
 
                     if(isset($arrData['message']['from']['id'])){
-                        $this->requestToTelegram(array("text" => "ID:".$arrData['message']['from']['id'], "reply_markup" => $keyboard_json), $this->adminId, "sendMessage");
+                        $this->requestToTelegram(array("text" => "ID:".$arrData['message']['from']['id'], "silent" => true, "disable_notification" => true, "reply_markup" => $keyboard_json), $this->adminId, "sendMessage");
                     }
                 /*if (!isset($arrData['callback_query'])){
                     $this->requestToTelegram(array("text" => "ID:".$arrData['message']['from']['id']), $this->adminId, "sendMessage");
